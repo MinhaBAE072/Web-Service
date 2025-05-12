@@ -1,0 +1,3696 @@
+openapi: 3.0.0
+info:
+  title: SKALA Community API (Generated from ERD)
+  version: 1.0.0
+  description: API specification based strictly on the provided ERD SQL for the SKALA community platform. Covers members, profiles, mentoring, questions, study groups, and administrative functions.
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/skcc-678/skalacommunityBMH/1.0.0
+  - url: /api/v1 # Adjust base path as needed
+    description: Development server
+
+tags:
+  - name: Members
+    description: Operations related to members (users)
+  - name: Profiles
+    description: Operations related to member profiles
+  - name: Tags
+    description: Operations related to tags (skills, interests, etc.)
+  - name: MemberTags
+    description: Operations managing tags associated with members
+  - name: MentoringRequests
+    description: Operations for requesting mentoring
+  - name: MentoringRelationships
+    description: Operations managing active or past mentoring relationships
+  - name: MentoringFeedback
+    description: Operations for giving feedback on mentoring relationships
+  - name: Questions
+    description: Operations related to questions and answers forum
+  - name: Answers
+    description: Operations related to answers for questions
+  - name: QuestionTags
+    description: Operations managing tags associated with questions
+  - name: StudyGroups
+    description: Operations related to study groups
+  - name: GroupTags
+    description: Operations managing tags associated with study groups
+  - name: GroupMembers
+    description: Operations managing members within study groups
+  - name: GroupJoinRequests
+    description: Operations managing requests to join private study groups
+  - name: GroupPosts
+    description: Operations related to posts within study groups
+  - name: TagSuggestions
+    description: Operations for members suggesting new tags
+  - name: PointTransactions
+    description: Operations viewing member point transactions (likely read-only for users)
+  - name: Notifications
+    description: Operations related to user notifications
+  - name: Announcements
+    description: Operations related to site-wide announcements (Admin-managed)
+  - name: Admins
+    description: Operations related to administrators (potentially restricted)
+
+paths:
+  # Member Operations
+  /members:
+    get:
+      tags: [Members]
+      summary: List all members
+      description: Retrieves a list of members, potentially filterable.
+      operationId: getMembers
+      parameters:
+        - name: generation
+          in: query
+          description: Filter by generation
+          schema:
+            type: integer
+        - name: educational_status
+          in: query
+          description: Filter by educational status
+          schema:
+            $ref: '#/components/schemas/EducationalStatus'
+        - name: status
+          in: query
+          description: Filter by member status
+          schema:
+            $ref: '#/components/schemas/MemberStatus'
+      responses:
+        '200':
+          description: A list of members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Member'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Members]
+      summary: Register a new member
+      description: Creates a new member record. Status defaults to PENDING_APPROVAL.
+      operationId: createMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberInput'
+      responses:
+        '201':
+          description: Member created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /members/{member_id}:
+    get:
+      tags: [Members]
+      summary: Get member by ID
+      description: Retrieves details of a specific member.
+      operationId: getMemberById
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          description: ID of the member to retrieve
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Member details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [Members]
+      summary: Update member details
+      description: Updates information for an existing member.
+      operationId: updateMember
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          description: ID of the member to update
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberUpdate' # Use a specific update schema if needed
+      responses:
+        '200':
+          description: Member updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [Members]
+      summary: Delete a member
+      description: Marks a member account as deleted (or performs actual deletion based on policy).
+      operationId: deleteMember
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          description: ID of the member to delete
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Member deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # Profile Operations (Nested under Member)
+  /members/{member_id}/profile:
+    get:
+      tags: [Profiles]
+      summary: Get member's profile
+      description: Retrieves the profile information for a specific member.
+      operationId: getMemberProfile
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          description: ID of the member whose profile to retrieve
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Member profile details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '404':
+          description: Member or Profile not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Profiles]
+      summary: Create member's profile
+      description: Creates the profile for a specific member (should only happen once per member).
+      operationId: createMemberProfile
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          description: ID of the member to create the profile for
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileInput' # Excludes member_id, profile_id
+      responses:
+        '201':
+          description: Profile created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Member not found
+        '409':
+          description: Profile already exists for this member
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [Profiles]
+      summary: Update member's profile
+      description: Updates the profile information for a specific member.
+      operationId: updateMemberProfile
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          description: ID of the member whose profile to update
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileInput' # Excludes member_id, profile_id
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Member or Profile not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    # DELETE for Profile might not be standard; handled by Member deletion or specific logic.
+
+  # Tag Operations
+  /tags:
+    get:
+      tags: [Tags]
+      summary: List all tags
+      description: Retrieves a list of all available tags, possibly filterable by type.
+      operationId: getTags
+      parameters:
+        - name: type
+          in: query
+          description: Filter by tag type
+          schema:
+            $ref: '#/components/schemas/TagType'
+      responses:
+        '200':
+          description: A list of tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tag'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Tags]
+      summary: Create a new tag (Admin)
+      description: Creates a new tag. Usually an admin operation or via suggestions.
+      operationId: createTag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagInput' # Requires name, type; admin_id optional
+      responses:
+        '201':
+          description: Tag created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Tag name already exists
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tags/{tag_id}:
+    get:
+      tags: [Tags]
+      summary: Get tag by ID
+      description: Retrieves details of a specific tag.
+      operationId: getTagById
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          description: ID of the tag to retrieve
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tag details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [Tags]
+      summary: Update a tag (Admin)
+      description: Updates an existing tag's name or type. Usually an admin operation.
+      operationId: updateTag
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          description: ID of the tag to update
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagInput' # Requires name, type
+      responses:
+        '200':
+          description: Tag updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Tag name already exists
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [Tags]
+      summary: Delete a tag (Admin)
+      description: Deletes a tag. Requires handling associated MemberTags, QuestionTags, etc. Usually an admin operation.
+      operationId: deleteTag
+      parameters:
+        - name: tag_id
+          in: path
+          required: true
+          description: ID of the tag to delete
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Tag deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # MemberTag Operations (Managing tags FOR a member)
+  /members/{member_id}/tags:
+    get:
+      tags: [MemberTags]
+      summary: List tags for a member
+      description: Retrieves the list of skill or interest tags associated with a specific member.
+      operationId: getMemberTags
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          description: ID of the member
+          schema:
+            type: integer
+        - name: type
+          in: query
+          description: Filter by tag type (SKILL or INTEREST)
+          schema:
+            $ref: '#/components/schemas/MemberTagType'
+      responses:
+        '200':
+          description: A list of tags associated with the member
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MemberTag' # Or return Tag objects directly? Let's return MemberTag for clarity on the relationship
+        '404':
+          description: Member not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [MemberTags]
+      summary: Add a tag to a member
+      description: Associates a tag (skill or interest) with a member.
+      operationId: addMemberTag
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          description: ID of the member
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tag_id, type]
+              properties:
+                tag_id:
+                  type: integer
+                  description: ID of the tag to add
+                type:
+                  $ref: '#/components/schemas/MemberTagType'
+      responses:
+        '201':
+          description: Tag added successfully to member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberTag'
+        '400':
+          $ref: '#/components/responses/BadRequest' # e.g., Invalid tag_id or type
+        '404':
+          description: Member or Tag not found
+        '409':
+          description: Member already has this tag with this type
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /members/{member_id}/tags/{tag_id}:
+    delete:
+      tags: [MemberTags]
+      summary: Remove a tag from a member
+      description: Removes a specific skill or interest tag association from a member.
+      operationId: removeMemberTag
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          description: ID of the member
+          schema:
+            type: integer
+        - name: tag_id
+          in: path
+          required: true
+          description: ID of the tag to remove
+          schema:
+            type: integer
+        - name: type # Need to specify which type (SKILL/INTEREST) if non-unique constraint isn't strictly on (member_id, tag_id)
+          in: query
+          required: true
+          description: The type of tag relationship to remove (SKILL or INTEREST)
+          schema:
+            $ref: '#/components/schemas/MemberTagType'
+      responses:
+        '204':
+          description: Tag removed successfully from member
+        '404':
+          description: Member, Tag, or specific MemberTag association not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # MentoringRequest Operations
+  /mentoring-requests:
+    get:
+      tags: [MentoringRequests]
+      summary: List mentoring requests
+      description: Retrieves a list of mentoring requests, filterable by status, mentee, or mentor.
+      operationId: getMentoringRequests
+      parameters:
+        - name: mentee_member_id
+          in: query
+          schema:
+            type: integer
+        - name: mentor_member_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/MentoringRequestStatus'
+      responses:
+        '200':
+          description: A list of mentoring requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MentoringRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [MentoringRequests]
+      summary: Create a mentoring request
+      description: A mentee sends a request to a potential mentor.
+      operationId: createMentoringRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MentoringRequestInput'
+      responses:
+        '201':
+          description: Mentoring request created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MentoringRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Mentee or Mentor member not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /mentoring-requests/{request_id}:
+    get:
+      tags: [MentoringRequests]
+      summary: Get mentoring request by ID
+      description: Retrieves details of a specific mentoring request.
+      operationId: getMentoringRequestById
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Mentoring request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MentoringRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [MentoringRequests]
+      summary: Update mentoring request status
+      description: Accepts, rejects, or cancels a mentoring request. Typically performed by the mentor or mentee.
+      operationId: updateMentoringRequestStatus
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/MentoringRequestStatusUpdate' # Subset of statuses possible for update
+      responses:
+        '200':
+          description: Mentoring request status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MentoringRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest' # e.g., invalid status transition
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [MentoringRequests]
+      summary: Cancel a mentoring request (by Mentee)
+      description: Allows the mentee to cancel a PENDING request they sent. (Alternatively handled via PUT with status CANCELED).
+      operationId: cancelMentoringRequest
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Mentoring request canceled successfully
+        '400':
+          description: Request is not in a cancelable state (e.g., already accepted/rejected)
+        '403':
+          description: Only the mentee who created the request can cancel it
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # MentoringRelationship Operations
+  /mentoring-relationships:
+    get:
+      tags: [MentoringRelationships]
+      summary: List mentoring relationships
+      description: Retrieves active or ended mentoring relationships, filterable by mentee, mentor, or status.
+      operationId: getMentoringRelationships
+      parameters:
+        - name: mentee_member_id
+          in: query
+          schema:
+            type: integer
+        - name: mentor_member_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/MentoringRelationshipStatus'
+      responses:
+        '200':
+          description: A list of mentoring relationships
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MentoringRelationship'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    # POST might be an admin action if relationships can be created manually
+    # post: ... (Admin only potentially)
+
+  /mentoring-relationships/{relationship_id}:
+    get:
+      tags: [MentoringRelationships]
+      summary: Get mentoring relationship by ID
+      description: Retrieves details of a specific mentoring relationship.
+      operationId: getMentoringRelationshipById
+      parameters:
+        - name: relationship_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Mentoring relationship details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MentoringRelationship'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [MentoringRelationships]
+      summary: Update mentoring relationship status (e.g., end)
+      description: Updates the status of a mentoring relationship, primarily to mark it as 'ENDED'.
+      operationId: updateMentoringRelationshipStatus
+      parameters:
+        - name: relationship_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/MentoringRelationshipStatus'
+                # ended_at could be set automatically server-side when status becomes ENDED
+      responses:
+        '200':
+          description: Mentoring relationship status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MentoringRelationship'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    # DELETE might not be standard, relationships usually transition to 'ENDED'
+
+  # MentoringFeedback Operations (Nested under Relationship)
+  /mentoring-relationships/{relationship_id}/feedback:
+    get:
+      tags: [MentoringFeedback]
+      summary: Get feedback for a mentoring relationship
+      description: Retrieves feedback submitted for a specific mentoring relationship.
+      operationId: getMentoringFeedbackForRelationship
+      parameters:
+        - name: relationship_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Feedback list for the relationship
+          content:
+            application/json:
+              schema:
+                type: array # Usually one feedback per reviewer, but could be multiple if allowed
+                items:
+                  $ref: '#/components/schemas/MentoringFeedback'
+        '404':
+          description: Relationship not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [MentoringFeedback]
+      summary: Submit feedback for a mentoring relationship
+      description: Allows a participant (usually mentee) to submit feedback after a relationship ends.
+      operationId: submitMentoringFeedback
+      parameters:
+        - name: relationship_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MentoringFeedbackInput' # Excludes reviewer_member_id (taken from auth), relationship_id (from path)
+      responses:
+        '201':
+          description: Feedback submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MentoringFeedback'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: User not authorized to give feedback for this relationship or feedback already submitted
+        '404':
+          description: Relationship not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # MentoringFeedback (Individual Feedback Item - Less Common)
+  # /mentoring-feedback/{feedback_id}: GET, PUT, DELETE might exist but are less primary
+
+  # Question Operations
+  /questions:
+    get:
+      tags: [Questions]
+      summary: List questions
+      description: Retrieves a list of questions, potentially filterable and sortable.
+      operationId: getQuestions
+      parameters:
+        - name: author_member_id
+          in: query
+          schema:
+            type: integer
+        - name: is_resolved
+          in: query
+          schema:
+            type: boolean
+        - name: tag_id # Filter by tag
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Question'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Questions]
+      summary: Ask a new question
+      description: Creates a new question in the forum.
+      operationId: createQuestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionInput' # Requires title, content; author taken from auth
+      responses:
+        '201':
+          description: Question created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /questions/{question_id}:
+    get:
+      tags: [Questions]
+      summary: Get question by ID
+      description: Retrieves details of a specific question, including its answers. (Answers might be a separate call or embedded). Increment view count.
+      operationId: getQuestionById
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Question details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question' # Might include answers embedded or linked
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [Questions]
+      summary: Update a question
+      description: Updates the title or content of a question. Only allowed for the author or admin.
+      operationId: updateQuestion
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionUpdate' # Only title, content usually
+      responses:
+        '200':
+          description: Question updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: User not authorized to update this question
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [Questions]
+      summary: Delete a question
+      description: Deletes a question. Only allowed for the author or admin. Might hide instead of actual delete.
+      operationId: deleteQuestion
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Question deleted successfully
+        '403':
+          description: User not authorized to delete this question
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # Answer Operations (Nested under Question)
+  /questions/{question_id}/answers:
+    get:
+      tags: [Answers]
+      summary: List answers for a question
+      description: Retrieves all answers submitted for a specific question.
+      operationId: getAnswersForQuestion
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of answers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Answer'
+        '404':
+          description: Question not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Answers]
+      summary: Submit an answer to a question
+      description: Creates a new answer for the specified question.
+      operationId: createAnswer
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswerInput' # Requires content; author from auth, question_id from path
+      responses:
+        '201':
+          description: Answer created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Answer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Question not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /questions/{question_id}/answers/{answer_id}:
+    get:
+      tags: [Answers]
+      summary: Get a specific answer
+      description: Retrieves details of a single answer.
+      operationId: getAnswerById
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: answer_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Answer details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Answer'
+        '404':
+          description: Question or Answer not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [Answers]
+      summary: Update an answer
+      description: Updates the content of an answer. Only allowed for the author or admin.
+      operationId: updateAnswer
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: answer_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswerUpdate' # Only content usually
+      responses:
+        '200':
+          description: Answer updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Answer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: User not authorized to update this answer
+        '404':
+          description: Question or Answer not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [Answers]
+      summary: Delete an answer
+      description: Deletes an answer. Only allowed for the author or admin. Might hide instead.
+      operationId: deleteAnswer
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: answer_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Answer deleted successfully
+        '403':
+          description: User not authorized to delete this answer
+        '404':
+          description: Question or Answer not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /questions/{question_id}/answers/{answer_id}/accept: # Example custom action via PUT/POST
+    put: # Or POST
+      tags: [Answers]
+      summary: Mark an answer as accepted
+      description: Allows the question author to mark a specific answer as the accepted one.
+      operationId: acceptAnswer
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: answer_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Answer marked as accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Answer' # Return updated answer
+        '403':
+          description: Only the question author can accept an answer
+        '404':
+          description: Question or Answer not found
+        '409':
+          description: Another answer is already accepted for this question (if only one allowed)
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # QuestionTag Operations (Managing tags FOR a question)
+  /questions/{question_id}/tags:
+    get:
+      tags: [QuestionTags]
+      summary: List tags for a question
+      description: Retrieves the list of tags associated with a specific question.
+      operationId: getQuestionTags
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of tags associated with the question
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuestionTag' # Or return Tag objects
+        '404':
+          description: Question not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [QuestionTags]
+      summary: Add a tag to a question
+      description: Associates a tag with a question. Usually done by author or admin.
+      operationId: addQuestionTag
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tag_id]
+              properties:
+                tag_id:
+                  type: integer
+                  description: ID of the tag to add
+      responses:
+        '201':
+          description: Tag added successfully to question
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionTag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+           description: User not authorized to add tags to this question
+        '404':
+          description: Question or Tag not found
+        '409':
+          description: Question already has this tag
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /questions/{question_id}/tags/{tag_id}:
+    delete:
+      tags: [QuestionTags]
+      summary: Remove a tag from a question
+      description: Removes a specific tag association from a question. Usually by author or admin.
+      operationId: removeQuestionTag
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Tag removed successfully from question
+        '403':
+          description: User not authorized to remove tags from this question
+        '404':
+          description: Question, Tag, or specific QuestionTag association not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # StudyGroup Operations
+  /study-groups:
+    get:
+      tags: [StudyGroups]
+      summary: List study groups
+      description: Retrieves a list of study groups, filterable by type, tags, etc.
+      operationId: getStudyGroups
+      parameters:
+        - name: group_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/GroupType'
+        - name: is_private
+          in: query
+          schema:
+            type: boolean
+        - name: tag_id # Filter by tag
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of study groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StudyGroup'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [StudyGroups]
+      summary: Create a new study group
+      description: Creates a new study group. The creator becomes the initial admin member.
+      operationId: createStudyGroup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyGroupInput' # creator_member_id from auth
+      responses:
+        '201':
+          description: Study group created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /study-groups/{group_id}:
+    get:
+      tags: [StudyGroups]
+      summary: Get study group by ID
+      description: Retrieves details of a specific study group.
+      operationId: getStudyGroupById
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Study group details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroup'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [StudyGroups]
+      summary: Update a study group
+      description: Updates details of a study group. Only allowed for group admins or site admins.
+      operationId: updateStudyGroup
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyGroupUpdate' # Subset of fields allowed for update
+      responses:
+        '200':
+          description: Study group updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: User not authorized to update this group
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [StudyGroups]
+      summary: Delete a study group
+      description: Deletes a study group. Only allowed for group creator/admins or site admins. Might hide instead.
+      operationId: deleteStudyGroup
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Study group deleted successfully
+        '403':
+          description: User not authorized to delete this group
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # GroupTag Operations (Managing tags FOR a group)
+  /study-groups/{group_id}/tags:
+    get:
+      tags: [GroupTags]
+      summary: List tags for a study group
+      description: Retrieves the list of tags associated with a specific study group.
+      operationId: getGroupTags
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of tags associated with the group
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GroupTag' # Or return Tag objects
+        '404':
+          description: Group not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [GroupTags]
+      summary: Add a tag to a study group
+      description: Associates a tag with a study group. Usually done by group admin.
+      operationId: addGroupTag
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tag_id]
+              properties:
+                tag_id:
+                  type: integer
+                  description: ID of the tag to add
+      responses:
+        '201':
+          description: Tag added successfully to group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupTag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: User not authorized to add tags to this group
+        '404':
+          description: Group or Tag not found
+        '409':
+          description: Group already has this tag
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /study-groups/{group_id}/tags/{tag_id}:
+    delete:
+      tags: [GroupTags]
+      summary: Remove a tag from a study group
+      description: Removes a specific tag association from a study group. Usually by group admin.
+      operationId: removeGroupTag
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: tag_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Tag removed successfully from group
+        '403':
+          description: User not authorized to remove tags from this group
+        '404':
+          description: Group, Tag, or specific GroupTag association not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # GroupMember Operations
+  /study-groups/{group_id}/members:
+    get:
+      tags: [GroupMembers]
+      summary: List members of a study group
+      description: Retrieves the list of members belonging to a specific study group.
+      operationId: getGroupMembers
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of group members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GroupMember' # Could also return Member objects with role info
+        '404':
+          description: Group not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post: # For public groups or adding by admin
+      tags: [GroupMembers]
+      summary: Add a member to a study group
+      description: Adds a member to a group. Used for public groups (self-join) or by group admins. Private groups use Join Requests.
+      operationId: addGroupMember
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [member_id]
+              properties:
+                member_id: # For admin adding others, or self-joining public group
+                  type: integer
+                role: # Optional, defaults to MEMBER, settable by admin
+                  $ref: '#/components/schemas/GroupMemberRole'
+      responses:
+        '201':
+          description: Member added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMember'
+        '400':
+          description: Bad Request (e.g., group is private and requires request)
+        '403':
+          description: User not authorized to add members (or self if private)
+        '404':
+          description: Group or Member not found
+        '409':
+          description: Member already in the group
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /study-groups/{group_id}/members/{member_id}:
+    get: # Check membership details
+      tags: [GroupMembers]
+      summary: Get group membership details for a user
+      description: Retrieves the role and join date for a specific member within a group.
+      operationId: getGroupMember
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: member_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Group membership details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMember'
+        '404':
+          description: Group, Member, or membership not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put: # Update role
+      tags: [GroupMembers]
+      summary: Update a group member's role
+      description: Changes the role (e.g., MEMBER to ADMIN) of a member within a group. Requires group admin privileges.
+      operationId: updateGroupMemberRole
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: member_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  $ref: '#/components/schemas/GroupMemberRole'
+      responses:
+        '200':
+          description: Member role updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMember'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: User not authorized to change roles in this group
+        '404':
+          description: Group, Member, or membership not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete: # Remove member / Leave group
+      tags: [GroupMembers]
+      summary: Remove a member from a study group / Leave group
+      description: Removes a member from the group (by admin) or allows a member to leave.
+      operationId: removeGroupMember
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: member_id
+          in: path
+          required: true
+          schema:
+            type: integer # User ID to remove (can be self)
+      responses:
+        '204':
+          description: Member removed successfully / Left group
+        '403':
+          description: User not authorized to remove this member (or cannot remove last admin)
+        '404':
+          description: Group, Member, or membership not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # GroupJoinRequest Operations (For private groups)
+  /study-groups/{group_id}/join-requests:
+    get:
+      tags: [GroupJoinRequests]
+      summary: List join requests for a group (Group Admin)
+      description: Retrieves pending join requests for a private group. Requires group admin privileges.
+      operationId: getGroupJoinRequests
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/GroupJoinRequestStatus'
+      responses:
+        '200':
+          description: A list of join requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GroupJoinRequest'
+        '403':
+          description: User not authorized to view requests for this group
+        '404':
+          description: Group not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [GroupJoinRequests]
+      summary: Request to join a private group
+      description: A member sends a request to join a private study group.
+      operationId: createGroupJoinRequest
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody: # Optional message
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                request_message:
+                  type: string
+                  nullable: true
+      responses:
+        '201':
+          description: Join request submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupJoinRequest'
+        '400':
+          description: Bad Request (e.g., group is not private, already a member, already requested)
+        '404':
+          description: Group not found
+        '409':
+          description: Join request already pending or user is already a member
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /study-groups/{group_id}/join-requests/{join_request_id}:
+    get:
+      tags: [GroupJoinRequests]
+      summary: Get a specific join request (Group Admin)
+      description: Retrieves details of a specific join request. Requires group admin privileges.
+      operationId: getGroupJoinRequestById
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: join_request_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Join request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupJoinRequest'
+        '403':
+          description: User not authorized to view this request
+        '404':
+          description: Group or Join Request not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put: # Process request (Accept/Reject)
+      tags: [GroupJoinRequests]
+      summary: Process a join request (Group Admin)
+      description: Accepts or rejects a pending join request. Requires group admin privileges. Adds member if accepted.
+      operationId: processGroupJoinRequest
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: join_request_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/GroupJoinRequestStatusUpdate' # ACCEPTED or REJECTED
+      responses:
+        '200':
+          description: Join request processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupJoinRequest' # Return updated request status
+        '400':
+          description: Bad Request (e.g., request not pending, invalid status)
+        '403':
+          description: User not authorized to process requests for this group
+        '404':
+          description: Group or Join Request not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete: # Cancel request (by Requester)
+      tags: [GroupJoinRequests]
+      summary: Cancel a pending join request
+      description: Allows the member who requested to join to cancel their pending request.
+      operationId: cancelGroupJoinRequest
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: join_request_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Join request canceled successfully
+        '400':
+          description: Request is not in a cancelable state (e.g., already processed)
+        '403':
+          description: Only the user who made the request can cancel it
+        '404':
+          description: Group or Join Request not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # GroupPost Operations (Nested under Group)
+  /study-groups/{group_id}/posts:
+    get:
+      tags: [GroupPosts]
+      summary: List posts within a study group
+      description: Retrieves posts made within a specific study group. Requires membership.
+      operationId: getGroupPosts
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of group posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GroupPost'
+        '403':
+          description: User not authorized to view posts in this group (e.g., not a member)
+        '404':
+          description: Group not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [GroupPosts]
+      summary: Create a new post in a study group
+      description: Creates a new post within the specified group. Requires membership.
+      operationId: createGroupPost
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupPostInput' # author_member_id from auth, group_id from path
+      responses:
+        '201':
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupPost'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: User not authorized to post in this group
+        '404':
+          description: Group not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /study-groups/{group_id}/posts/{post_id}:
+    get:
+      tags: [GroupPosts]
+      summary: Get a specific post within a group
+      description: Retrieves details of a single post within a group. Requires membership.
+      operationId: getGroupPostById
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Group post details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupPost'
+        '403':
+          description: User not authorized to view this post
+        '404':
+          description: Group or Post not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [GroupPosts]
+      summary: Update a post within a group
+      description: Updates a post. Allowed for post author or group/site admin.
+      operationId: updateGroupPost
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupPostUpdate' # Title, content, attachments usually
+      responses:
+        '200':
+          description: Post updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupPost'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: User not authorized to update this post
+        '404':
+          description: Group or Post not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [GroupPosts]
+      summary: Delete a post within a group
+      description: Deletes a post. Allowed for post author or group/site admin. Might hide instead.
+      operationId: deleteGroupPost
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Post deleted successfully
+        '403':
+          description: User not authorized to delete this post
+        '404':
+          description: Group or Post not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # TagSuggestion Operations
+  /tag-suggestions:
+    get: # Likely Admin only
+      tags: [TagSuggestions]
+      summary: List tag suggestions (Admin)
+      description: Retrieves a list of tag suggestions submitted by members.
+      operationId: getTagSuggestions
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TagSuggestionStatus'
+      responses:
+        '200':
+          description: A list of tag suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TagSuggestion'
+        '403':
+          description: Forbidden (Admin access required)
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [TagSuggestions]
+      summary: Suggest a new tag
+      description: Allows members to suggest new tags to be added to the system.
+      operationId: createTagSuggestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagSuggestionInput' # suggested_by_member_id from auth
+      responses:
+        '201':
+          description: Tag suggestion submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagSuggestion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tag-suggestions/{suggestion_id}:
+    get: # Likely Admin only
+      tags: [TagSuggestions]
+      summary: Get a tag suggestion by ID (Admin)
+      description: Retrieves details of a specific tag suggestion.
+      operationId: getTagSuggestionById
+      parameters:
+        - name: suggestion_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tag suggestion details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagSuggestion'
+        '403':
+          description: Forbidden (Admin access required)
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put: # Process suggestion (Admin)
+      tags: [TagSuggestions]
+      summary: Process a tag suggestion (Admin)
+      description: Approves or rejects a tag suggestion. If approved, may create the Tag.
+      operationId: processTagSuggestion
+      parameters:
+        - name: suggestion_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: '#/components/schemas/TagSuggestionStatusUpdate' # APPROVED or REJECTED
+      responses:
+        '200':
+          description: Tag suggestion processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagSuggestion'
+        '400':
+          description: Bad Request (e.g., suggestion not pending)
+        '403':
+          description: Forbidden (Admin access required)
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    # DELETE might not be typical for suggestions
+
+  # PointTransaction Operations (Read-only for member)
+  /members/{member_id}/points/transactions:
+    get:
+      tags: [PointTransactions]
+      summary: List point transactions for a member
+      description: Retrieves the history of point changes for the specified member.
+      operationId: getMemberPointTransactions
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          description: ID of the member whose transactions to retrieve
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of point transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PointTransaction'
+        '403':
+          description: Forbidden (User can likely only view their own transactions)
+        '404':
+          description: Member not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # PointTransaction (Admin-only Create/Adjust) - Optional based on requirements
+  /point-transactions: # Admin endpoint
+    post:
+      tags: [PointTransactions]
+      summary: Create a point transaction (Admin)
+      description: Manually adjusts a member's points. Admin operation.
+      operationId: createPointTransaction # (Admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PointTransactionInput' # Requires member_id, points_change, reason_code
+      responses:
+        '201':
+          description: Point transaction created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PointTransaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Forbidden (Admin access required)
+        '404':
+          description: Member not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # Notification Operations
+  /members/{member_id}/notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications for a member
+      description: Retrieves notifications for the specified member, potentially filterable by read status.
+      operationId: getMemberNotifications
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          description: ID of the member whose notifications to retrieve
+          schema:
+            type: integer
+        - name: is_read
+          in: query
+          description: Filter by read status
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: A list of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        '403':
+          description: Forbidden (User can likely only view their own notifications)
+        '404':
+          description: Member not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /members/{member_id}/notifications/{notification_id}:
+    get: # Possibly redundant if list includes full details
+      tags: [Notifications]
+      summary: Get a specific notification
+      description: Retrieves details of a single notification.
+      operationId: getNotificationById
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Notification details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '403':
+          description: Forbidden (User cannot access this notification)
+        '404':
+          description: Member or Notification not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put: # Mark as read/unread
+      tags: [Notifications]
+      summary: Mark a notification as read/unread
+      description: Updates the read status of a specific notification.
+      operationId: updateNotificationReadStatus
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [is_read]
+              properties:
+                is_read:
+                  type: boolean
+                  description: Set to true to mark as read, false to mark as unread.
+      responses:
+        '200':
+          description: Notification status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification' # Return updated notification
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Forbidden (User cannot modify this notification)
+        '404':
+          description: Member or Notification not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    # DELETE might be an option to dismiss notifications
+
+  # Announcement Operations (Primarily Admin)
+  /announcements:
+    get:
+      tags: [Announcements]
+      summary: List announcements
+      description: Retrieves published announcements, potentially filtered. Accessible to all members.
+      operationId: getAnnouncements
+      parameters:
+        - name: is_published # Filter for published? Usually implied for non-admins
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: is_pinned # Get pinned announcements
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: A list of announcements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Announcement'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post: # Admin only
+      tags: [Announcements]
+      summary: Create a new announcement (Admin)
+      description: Creates a new announcement. Requires admin privileges.
+      operationId: createAnnouncement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnouncementInput' # author_admin_id from auth context
+      responses:
+        '201':
+          description: Announcement created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Announcement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Forbidden (Admin access required)
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /announcements/{announcement_id}:
+    get:
+      tags: [Announcements]
+      summary: Get announcement by ID
+      description: Retrieves details of a specific announcement.
+      operationId: getAnnouncementById
+      parameters:
+        - name: announcement_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Announcement details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Announcement'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put: # Admin only
+      tags: [Announcements]
+      summary: Update an announcement (Admin)
+      description: Updates an existing announcement. Requires admin privileges.
+      operationId: updateAnnouncement
+      parameters:
+        - name: announcement_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnouncementUpdate' # Subset of fields
+      responses:
+        '200':
+          description: Announcement updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Announcement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Forbidden (Admin access required)
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete: # Admin only
+      tags: [Announcements]
+      summary: Delete an announcement (Admin)
+      description: Deletes an announcement. Requires admin privileges.
+      operationId: deleteAnnouncement
+      parameters:
+        - name: announcement_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Announcement deleted successfully
+        '403':
+          description: Forbidden (Admin access required)
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # Admin Operations (Basic CRUD based on table)
+  /admins:
+    get: # Highly sensitive, likely restricted
+      tags: [Admins]
+      summary: List administrators (Restricted)
+      operationId: getAdmins
+      responses:
+        '200':
+          description: A list of administrators (excluding sensitive info like password hash)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Admin'
+        '403':
+          description: Forbidden
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post: # Highly sensitive, likely restricted
+      tags: [Admins]
+      summary: Create a new administrator (Restricted)
+      operationId: createAdmin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminInput'
+      responses:
+        '201':
+          description: Admin created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Admin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Forbidden
+        '409':
+          description: Username already exists
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admins/{admin_id}:
+    get: # Highly sensitive, likely restricted
+      tags: [Admins]
+      summary: Get administrator by ID (Restricted)
+      operationId: getAdminById
+      parameters:
+        - name: admin_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Admin details (excluding sensitive info)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Admin'
+        '403':
+          description: Forbidden
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put: # Highly sensitive, likely restricted
+      tags: [Admins]
+      summary: Update an administrator (Restricted)
+      operationId: updateAdmin
+      parameters:
+        - name: admin_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdate' # e.g., name, maybe password reset trigger
+      responses:
+        '200':
+          description: Admin updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Admin'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Forbidden
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete: # Highly sensitive, likely restricted
+      tags: [Admins]
+      summary: Delete an administrator (Restricted)
+      operationId: deleteAdmin
+      parameters:
+        - name: admin_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Admin deleted successfully
+        '403':
+          description: Forbidden
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+
+components:
+  schemas:
+    # Enum Definitions
+    EducationalStatus:
+      type: string
+      enum: [STUDENT, GRADUATING, ALUMNI]
+      description: Member's educational status relative to the program
+    MemberStatus:
+      type: string
+      enum: [PENDING_APPROVAL, ACTIVE, INACTIVE, DELETED]
+      description: Member's account status
+    MentoringRolePref:
+      type: string
+      enum: [MENTOR, MENTEE, BOTH, NONE]
+      nullable: true
+      description: Member's preference for mentoring role
+    MentoringStatus:
+      type: string
+      enum: [AVAILABLE, UNAVAILABLE]
+      nullable: true
+      description: Member's availability for mentoring
+    TagType:
+      type: string
+      enum: [SKILL, INTEREST, QUESTION, GROUP, OTHER]
+      description: Type/category of a tag
+    MemberTagType:
+       type: string
+       enum: [SKILL, INTEREST]
+       description: Type of tag association for a member (Skill or Interest)
+    MentoringRequestStatus:
+      type: string
+      enum: [PENDING, ACCEPTED, REJECTED, CANCELED]
+      description: Status of a mentoring request
+    MentoringRequestStatusUpdate: # Subset for PUT
+      type: string
+      enum: [ACCEPTED, REJECTED, CANCELED]
+      description: Allowed statuses when updating a mentoring request
+    MentoringRelationshipStatus:
+      type: string
+      enum: [ACTIVE, ENDED]
+      description: Status of an established mentoring relationship
+    GroupType:
+      type: string
+      enum: [STUDY, PROJECT, INTEREST, OTHER]
+      description: Type of study group
+    GroupMemberRole:
+      type: string
+      enum: [ADMIN, MEMBER]
+      description: Role of a member within a study group
+    GroupJoinRequestStatus:
+      type: string
+      enum: [PENDING, ACCEPTED, REJECTED]
+      description: Status of a request to join a group
+    GroupJoinRequestStatusUpdate: # Subset for PUT
+      type: string
+      enum: [ACCEPTED, REJECTED]
+      description: Allowed statuses when processing a join request
+    TagSuggestionStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED]
+      description: Status of a tag suggestion
+    TagSuggestionStatusUpdate: # Subset for PUT
+       type: string
+       enum: [APPROVED, REJECTED]
+       description: Allowed statuses when processing a tag suggestion
+    PointReasonCode:
+      type: string
+      enum: [ANSWER_ACCEPTED, MENTORING_COMPLETED, ACTIVITY_PARTICIPATION, ADMIN_ADJUSTMENT]
+      description: Code indicating the reason for a point transaction
+    NotificationType:
+      type: string
+      enum:
+        - MENTORING_REQUEST_RECEIVED
+        - MENTORING_REQUEST_RESULT
+        - MENTORING_ENDED
+        - GROUP_JOIN_REQUEST_RECEIVED
+        - GROUP_JOIN_RESULT
+        - NEW_ANSWER
+        - ANSWER_ACCEPTED
+        - NEW_GROUP_POST
+        - POINTS_AWARDED
+        - ANNOUNCEMENT_NEW
+      description: Type of notification
+
+    # Table Schemas
+    Member:
+      type: object
+      required:
+        - member_id
+        - email
+        - name
+        - generation
+        - educational_status
+        - status
+        - points
+        - created_at
+        - updated_at
+      properties:
+        member_id:
+          type: integer
+          format: int32
+          readOnly: true
+        email:
+          type: string
+          format: email
+          description: Login ID 역할
+        # password: # Excluded from response
+        name:
+          type: string
+        generation:
+          type: integer
+          description: SKALA 기수
+        educational_status:
+          $ref: '#/components/schemas/EducationalStatus'
+        status:
+          $ref: '#/components/schemas/MemberStatus'
+        points:
+          type: integer
+          default: 0
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+          description: 마지막 로그인 시간
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    MemberInput: # Schema for POST /members
+      type: object
+      required:
+        - email
+        - password # Required on creation
+        - name
+        - generation
+        - educational_status
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password # Indicate sensitive field
+        name:
+          type: string
+        generation:
+          type: integer
+        educational_status:
+          $ref: '#/components/schemas/EducationalStatus'
+        # status defaults server-side
+        # points defaults server-side
+    MemberUpdate: # Schema for PUT /members/{id}
+      type: object
+      properties:
+        # email: # Usually not updatable or handled separately
+        # password: # Password update usually a separate endpoint/flow
+        name:
+          type: string
+        generation:
+          type: integer
+        educational_status:
+          $ref: '#/components/schemas/EducationalStatus'
+        status: # Status update might be admin-only
+          $ref: '#/components/schemas/MemberStatus'
+        points: # Points update likely system/admin driven
+          type: integer
+        # last_login_at is read-only
+        # created_at, updated_at are read-only
+
+    Profile:
+      type: object
+      required:
+        - profile_id
+        - member_id # Included for reference, although accessed via member
+        - created_at
+        - updated_at
+      properties:
+        profile_id:
+          type: integer
+          format: int32
+          readOnly: true
+        member_id:
+          type: integer
+          format: int32
+          readOnly: true # Set via path/context
+        phone_number:
+          type: string
+          nullable: true
+          description: 연락처
+        profile_image_url:
+          type: string
+          format: url
+          nullable: true
+        introduction:
+          type: string
+          nullable: true
+        mentoring_role_pref:
+          $ref: '#/components/schemas/MentoringRolePref'
+        mentoring_status:
+          $ref: '#/components/schemas/MentoringStatus'
+        mentoring_available_topics:
+          type: string
+          nullable: true
+          description: 멘토링 가능 주요 분야 (텍스트 기술)
+        preferred_mentee_generations:
+          type: string
+          nullable: true
+          description: '선호 멘티 기수 (e.g., "10, 11")'
+        privacy_settings:
+          type: object # JSON field
+          nullable: true
+          description: '항목별 공개 범위 설정 (e.g., {"phone_number": "CONNECTIONS_ONLY", "skills": "PUBLIC"})'
+          additionalProperties: true # Allow any structure inside
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    ProfileInput: # Schema for POST/PUT /members/{id}/profile
+      type: object
+      properties:
+        phone_number:
+          type: string
+          nullable: true
+        profile_image_url:
+          type: string
+          format: url
+          nullable: true
+        introduction:
+          type: string
+          nullable: true
+        mentoring_role_pref:
+          $ref: '#/components/schemas/MentoringRolePref'
+        mentoring_status:
+          $ref: '#/components/schemas/MentoringStatus'
+        mentoring_available_topics:
+          type: string
+          nullable: true
+        preferred_mentee_generations:
+          type: string
+          nullable: true
+        privacy_settings:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    Admin:
+      type: object
+      required:
+        - admin_id
+        - username
+        - created_at
+        - updated_at
+      properties:
+        admin_id:
+          type: integer
+          format: int32
+          readOnly: true
+        username:
+          type: string
+          description: 관리자 로그인 ID
+        # password: # Excluded from response
+        name:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    AdminInput: # Schema for POST /admins
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+        name:
+          type: string
+          nullable: true
+    AdminUpdate: # Schema for PUT /admins/{id}
+      type: object
+      properties:
+        username: # Usually not updatable
+          type: string
+        # Password update via separate flow
+        name:
+          type: string
+          nullable: true
+
+    Tag:
+      type: object
+      required:
+        - tag_id
+        - name
+        - created_at
+        - updated_at
+      properties:
+        tag_id:
+          type: integer
+          format: int32
+          readOnly: true
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/TagType'
+        created_by_admin_id:
+          type: integer
+          nullable: true
+          readOnly: true # Set on creation if applicable
+          description: 관리자가 생성한 경우
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    TagInput: # Schema for POST/PUT /tags
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/TagType'
+        # created_by_admin_id is set server-side based on context
+
+    MemberTag:
+      type: object
+      required:
+        - member_tag_id
+        - member_id
+        - tag_id
+        - type
+        - created_at
+      properties:
+        member_tag_id:
+          type: integer
+          format: int32
+          readOnly: true
+        member_id:
+          type: integer
+          readOnly: true # Set via path/context
+        tag_id:
+          type: integer
+        type:
+          $ref: '#/components/schemas/MemberTagType'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    # Input for MemberTag is handled via path params and simple request body (tag_id, type)
+
+    MentoringRequest:
+      type: object
+      required:
+        - request_id
+        - mentee_member_id
+        - mentor_member_id
+        - status
+        - created_at
+        - updated_at
+      properties:
+        request_id:
+          type: integer
+          format: int32
+          readOnly: true
+        mentee_member_id:
+          type: integer
+          readOnly: true # Set based on context or input
+          description: 요청한 멤버 (후배)
+        mentor_member_id:
+          type: integer
+          readOnly: true # Set based on input
+          description: 요청받은 멤버 (선배)
+        request_message:
+          type: string
+          nullable: true
+        preferred_topics:
+          type: string
+          nullable: true
+          description: 희망 멘토링 분야
+        status:
+          $ref: '#/components/schemas/MentoringRequestStatus'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    MentoringRequestInput: # Schema for POST /mentoring-requests
+      type: object
+      required:
+        - mentor_member_id # Mentee ID comes from auth context
+      properties:
+        mentor_member_id:
+          type: integer
+        request_message:
+          type: string
+          nullable: true
+        preferred_topics:
+          type: string
+          nullable: true
+
+    MentoringRelationship:
+      type: object
+      required:
+        - relationship_id
+        - mentee_member_id
+        - mentor_member_id
+        - status
+        - started_at
+        - created_at
+        - updated_at
+      properties:
+        relationship_id:
+          type: integer
+          format: int32
+          readOnly: true
+        mentee_member_id:
+          type: integer
+          readOnly: true
+        mentor_member_id:
+          type: integer
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/MentoringRelationshipStatus'
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true # Set when status becomes ACTIVE
+          description: 멘토링 시작(수락) 일시
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true # Set when status becomes ENDED
+          description: 멘토링 종료 일시
+        mentoring_request_id:
+          type: integer
+          nullable: true
+          readOnly: true # Linked on creation from request
+          description: 이 관계를 시작시킨 원본 요청 ID
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    # No direct input schema; created via request acceptance or admin action. Update is via status PUT.
+
+    MentoringFeedback:
+      type: object
+      required:
+        - feedback_id
+        - relationship_id
+        - reviewer_member_id
+        - rating
+        - is_anonymous
+        - created_at
+        - updated_at
+      properties:
+        feedback_id:
+          type: integer
+          format: int32
+          readOnly: true
+        relationship_id:
+          type: integer
+          readOnly: true # Set via path/context
+        reviewer_member_id:
+          type: integer
+          readOnly: true # Set via auth context
+          description: 피드백 작성자 (주로 멘티)
+        rating:
+          type: integer
+          description: '평점 (e.g., 1-5)'
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          nullable: true
+        is_anonymous:
+          type: boolean
+          default: false
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    MentoringFeedbackInput: # Schema for POST /mentoring-relationships/{id}/feedback
+      type: object
+      required:
+        - rating
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          nullable: true
+        is_anonymous:
+          type: boolean
+          default: false
+
+    Question:
+      type: object
+      required:
+        - question_id
+        - author_member_id
+        - title
+        - content
+        - views
+        - is_resolved
+        - is_hidden_by_admin
+        - created_at
+        - updated_at
+      properties:
+        question_id:
+          type: integer
+          format: int32
+          readOnly: true
+        author_member_id:
+          type: integer
+          readOnly: true # Set via auth context
+        title:
+          type: string
+        content:
+          type: string
+        views:
+          type: integer
+          readOnly: true # Updated server-side
+          default: 0
+        is_resolved:
+          type: boolean
+          readOnly: true # Updated via answer acceptance
+          default: false
+          description: 답변 채택 등으로 해결 여부
+        is_hidden_by_admin:
+          type: boolean
+          readOnly: true # Updated by admin action
+          default: false
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        # answers: # Optional: Embed answers or link via separate endpoint
+        #   type: array
+        #   items:
+        #     $ref: '#/components/schemas/Answer'
+        # tags: # Optional: Embed tags or link via separate endpoint
+        #   type: array
+        #   items:
+        #     $ref: '#/components/schemas/Tag'
+    QuestionInput: # Schema for POST /questions
+      type: object
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        # tag_ids: # Optional: Allow adding tags on creation
+        #  type: array
+        #  items:
+        #    type: integer
+    QuestionUpdate: # Schema for PUT /questions/{id}
+      type: object
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        # is_resolved: # Handled by accepting answer
+        # is_hidden_by_admin: # Handled by admin action
+
+    QuestionTag:
+      type: object
+      required:
+        - question_tag_id
+        - question_id
+        - tag_id
+        - created_at
+      properties:
+        question_tag_id:
+          type: integer
+          format: int32
+          readOnly: true
+        question_id:
+          type: integer
+          readOnly: true # Set via path/context
+        tag_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    # Input handled via path params and simple request body (tag_id)
+
+    Answer:
+      type: object
+      required:
+        - answer_id
+        - question_id
+        - author_member_id
+        - content
+        - is_accepted
+        - is_hidden_by_admin
+        - created_at
+        - updated_at
+      properties:
+        answer_id:
+          type: integer
+          format: int32
+          readOnly: true
+        question_id:
+          type: integer
+          readOnly: true # Set via path/context
+        author_member_id:
+          type: integer
+          readOnly: true # Set via auth context
+        content:
+          type: string
+        is_accepted:
+          type: boolean
+          readOnly: true # Updated via specific action by question author
+          default: false
+          description: 질문자에 의해 채택된 답변
+        is_hidden_by_admin:
+          type: boolean
+          readOnly: true # Updated by admin action
+          default: false
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    AnswerInput: # Schema for POST /questions/{id}/answers
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+    AnswerUpdate: # Schema for PUT /questions/{qid}/answers/{aid}
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+        # is_accepted: # Updated via separate action
+        # is_hidden_by_admin: # Updated by admin action
+
+    StudyGroup:
+      type: object
+      required:
+        - group_id
+        - name
+        - group_type
+        - creator_member_id
+        - is_private
+        - is_hidden_by_admin
+        - created_at
+        - updated_at
+      properties:
+        group_id:
+          type: integer
+          format: int32
+          readOnly: true
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        group_type:
+          $ref: '#/components/schemas/GroupType'
+        max_members:
+          type: integer
+          nullable: true
+        creator_member_id:
+          type: integer
+          readOnly: true # Set via auth context on creation
+        is_private:
+          type: boolean
+          default: false
+          description: true면 가입 신청 필요, false면 즉시 가입
+        is_hidden_by_admin:
+          type: boolean
+          readOnly: true # Updated by admin action
+          default: false
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        # members: # Optional: Embed members or link
+        # tags: # Optional: Embed tags or link
+    StudyGroupInput: # Schema for POST /study-groups
+      type: object
+      required:
+        - name
+        - group_type
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        group_type:
+          $ref: '#/components/schemas/GroupType'
+        max_members:
+          type: integer
+          nullable: true
+        is_private:
+          type: boolean
+          default: false
+        # tag_ids: # Optional: Add tags on creation
+        #   type: array
+        #   items:
+        #     type: integer
+    StudyGroupUpdate: # Schema for PUT /study-groups/{id}
+       type: object
+       properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        group_type:
+          $ref: '#/components/schemas/GroupType'
+        max_members:
+          type: integer
+          nullable: true
+        is_private:
+          type: boolean
+        # is_hidden_by_admin: # Admin action
+
+    GroupTag:
+      type: object
+      required:
+        - group_tag_id
+        - group_id
+        - tag_id
+        - created_at
+      properties:
+        group_tag_id:
+          type: integer
+          format: int32
+          readOnly: true
+        group_id:
+          type: integer
+          readOnly: true # Set via path/context
+        tag_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    # Input handled via path params and simple request body (tag_id)
+
+    GroupMember:
+      type: object
+      required:
+        - group_member_id
+        - group_id
+        - member_id
+        - role
+        - joined_at
+        - created_at
+        - updated_at
+      properties:
+        group_member_id:
+          type: integer
+          format: int32
+          readOnly: true
+        group_id:
+          type: integer
+          readOnly: true # Set via path/context
+        member_id:
+          type: integer
+          readOnly: true # Set via path/context or input
+        role:
+          $ref: '#/components/schemas/GroupMemberRole'
+        joined_at:
+          type: string
+          format: date-time
+          readOnly: true # Set on creation
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    # Input handled via path params and request body (member_id, role)
+
+    GroupJoinRequest:
+      type: object
+      required:
+        - join_request_id
+        - group_id
+        - member_id
+        - status
+        - created_at
+        - updated_at
+      properties:
+        join_request_id:
+          type: integer
+          format: int32
+          readOnly: true
+        group_id:
+          type: integer
+          readOnly: true # Set via path/context
+        member_id:
+          type: integer
+          readOnly: true # Set via auth context on creation
+          description: 가입 신청자
+        request_message:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/GroupJoinRequestStatus'
+        processed_by_member_id:
+          type: integer
+          nullable: true
+          readOnly: true # Set when processed
+          description: 처리한 그룹 관리자 멤버 ID
+        processed_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true # Set when processed
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    # Input for POST: optional request_message
+    # Input for PUT: status (ACCEPTED/REJECTED)
+
+    GroupPost:
+      type: object
+      required:
+        - post_id
+        - group_id
+        - author_member_id
+        - title
+        - content
+        - is_hidden_by_admin
+        - created_at
+        - updated_at
+      properties:
+        post_id:
+          type: integer
+          format: int32
+          readOnly: true
+        group_id:
+          type: integer
+          readOnly: true # Set via path/context
+        author_member_id:
+          type: integer
+          readOnly: true # Set via auth context
+        title:
+          type: string
+        content:
+          type: string
+        attachments:
+          type: object # JSON field - Could be array of objects
+          nullable: true
+          description: '첨부파일 정보 (e.g., [{"name": "file.pdf", "url": "...", "size": 1024}])'
+          # Define a schema for attachments if structure is known
+          # items:
+          #   type: object
+          #   properties:
+          #     name: { type: string }
+          #     url: { type: string, format: url }
+          #     size: { type: integer }
+          additionalProperties: true # Or define structure
+        is_hidden_by_admin:
+          type: boolean
+          readOnly: true # Updated by admin action
+          default: false
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    GroupPostInput: # Schema for POST /study-groups/{id}/posts
+      type: object
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        attachments:
+          type: object
+          nullable: true
+          additionalProperties: true
+    GroupPostUpdate: # Schema for PUT /study-groups/{gid}/posts/{pid}
+       type: object
+       required:
+        - title
+        - content
+       properties:
+        title:
+          type: string
+        content:
+          type: string
+        attachments:
+          type: object
+          nullable: true
+          additionalProperties: true
+        # is_hidden_by_admin: # Admin action
+
+    TagSuggestion:
+      type: object
+      required:
+        - suggestion_id
+        - suggested_by_member_id
+        - suggested_tag_name
+        - status
+        - created_at
+        - updated_at
+      properties:
+        suggestion_id:
+          type: integer
+          format: int32
+          readOnly: true
+        suggested_by_member_id:
+          type: integer
+          readOnly: true # Set via auth context
+        suggested_tag_name:
+          type: string
+        tag_type:
+          $ref: '#/components/schemas/TagType'
+          description: 제안하는 태그의 타입 (SKILL, INTEREST 등)
+        reason:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/TagSuggestionStatus'
+        processed_by_admin_id:
+          type: integer
+          nullable: true
+          readOnly: true # Set when processed
+          description: 처리한 관리자 ID
+        processed_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true # Set when processed
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    TagSuggestionInput: # Schema for POST /tag-suggestions
+      type: object
+      required:
+        - suggested_tag_name
+        - tag_type
+      properties:
+        suggested_tag_name:
+          type: string
+        tag_type:
+          $ref: '#/components/schemas/TagType'
+        reason:
+          type: string
+          nullable: true
+    # Input for PUT: status (APPROVED/REJECTED)
+
+    PointTransaction:
+      type: object
+      required:
+        - transaction_id
+        - member_id
+        - points_change
+        - reason_code
+        - created_at
+      properties:
+        transaction_id:
+          type: integer
+          format: int32
+          readOnly: true
+        member_id:
+          type: integer
+          readOnly: true # Set via path/context or input
+        points_change:
+          type: integer
+          description: '양수: 획득, 음수: 사용'
+        reason_code:
+          $ref: '#/components/schemas/PointReasonCode'
+        description:
+          type: string
+          nullable: true
+          description: 부가 설명
+        related_entity_type:
+          type: string
+          nullable: true
+          description: '관련 엔티티 타입 (e.g., Answer, Event)'
+        related_entity_id:
+          type: integer
+          nullable: true
+          description: 관련 엔티티 ID
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PointTransactionInput: # Schema for POST /point-transactions (Admin)
+      type: object
+      required:
+        - member_id
+        - points_change
+        - reason_code
+      properties:
+        member_id:
+          type: integer
+        points_change:
+          type: integer
+        reason_code:
+          $ref: '#/components/schemas/PointReasonCode'
+        description:
+          type: string
+          nullable: true
+        related_entity_type:
+          type: string
+          nullable: true
+        related_entity_id:
+          type: integer
+          nullable: true
+
+    Notification:
+      type: object
+      required:
+        - notification_id
+        - recipient_member_id
+        - type
+        - content
+        - is_read
+        - created_at
+      properties:
+        notification_id:
+          type: integer
+          format: int32
+          readOnly: true
+        recipient_member_id:
+          type: integer
+          readOnly: true # Set server-side
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        content:
+          type: string
+        related_url:
+          type: string
+          format: url
+          nullable: true
+          description: 알림 클릭 시 이동할 URL
+        is_read:
+          type: boolean
+          default: false
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true # Set when is_read becomes true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    # No direct input schema; created by system events. Update via PUT is_read.
+
+    Announcement:
+      type: object
+      required:
+        - announcement_id
+        - author_admin_id
+        - title
+        - content
+        - is_published
+        - is_pinned
+        - created_at
+        - updated_at
+      properties:
+        announcement_id:
+          type: integer
+          format: int32
+          readOnly: true
+        author_admin_id:
+          type: integer
+          readOnly: true # Set via auth context
+        title:
+          type: string
+        content:
+          type: string
+        is_published:
+          type: boolean
+          default: false
+        publish_start_date:
+          type: string
+          format: date-time
+          nullable: true
+        publish_end_date:
+          type: string
+          format: date-time
+          nullable: true
+        is_pinned:
+          type: boolean
+          default: false
+          description: 상단 고정 여부
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    AnnouncementInput: # Schema for POST /announcements (Admin)
+      type: object
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        is_published:
+          type: boolean
+          default: false
+        publish_start_date:
+          type: string
+          format: date-time
+          nullable: true
+        publish_end_date:
+          type: string
+          format: date-time
+          nullable: true
+        is_pinned:
+          type: boolean
+          default: false
+    AnnouncementUpdate: # Schema for PUT /announcements/{id} (Admin)
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        is_published:
+          type: boolean
+        publish_start_date:
+          type: string
+          format: date-time
+          nullable: true
+        publish_end_date:
+          type: string
+          format: date-time
+          nullable: true
+        is_pinned:
+          type: boolean
+
+    # Standard Error Response Schema
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string # Or integer
+          description: An application-specific error code.
+        message:
+          type: string
+          description: A human-readable explanation specific to this occurrence of the problem.
+        # Optionally add more fields like 'details', 'timestamp', etc.
+
+  responses:
+    NotFound:
+      description: The specified resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Bad request syntax or unsupported method. Check input parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: An unexpected server error occurred.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    # Unauthorized and Forbidden responses would typically be defined here too,
+    # but are omitted as per the request to exclude security schemas/aspects.
+
+# Security Schemas section omitted as requested
+# security: []
